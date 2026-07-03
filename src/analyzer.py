@@ -1,6 +1,7 @@
 import json
 import logging
-import subprocess
+import anthropic
+import os
 import time
 
 logger = logging.getLogger(__name__)
@@ -39,14 +40,6 @@ Today: {today}
 RECENT THEMES (past 7 days for trend context):
 {recent_themes}
 
-USER'S CURRENT PORTFOLIO (live eTrade positions — you MUST factor these into every recommendation):
-{portfolio_context}
-
-When the portfolio is non-empty:
-- Flag any existing position that today's macro signals argue for trimming or exiting
-- Flag any existing position that is reinforced by today's themes (hold/add signal)
-- Size new recommendations relative to portfolio context (avoid over-concentration)
-- If portfolio is empty or unavailable, omit portfolio-specific commentary
 
 SCORED ARTICLES (id, score, headline, upshot, theme, asset_class, tickers):
 {scored_json}
@@ -70,8 +63,7 @@ Return ONLY valid JSON with this exact structure (no markdown):
       "sector": "<sector>",
       "confidence": "<high|medium|low>",
       "rationale": "<cite themes/articles, mention specific tickers where relevant>",
-      "supporting_theme": "<theme name>",
-      "portfolio_note": "<if user holds a related position: explicit hold/trim/add/exit signal with reason — empty string if not applicable>"
+      "supporting_theme": "<theme name>"
     }}
   ],
   "watchlist": [
@@ -100,25 +92,6 @@ def _format_recent_headlines(recent_headlines: list) -> str:
     return "\n".join(lines)
 
 
-def _format_portfolio(portfolio: list) -> str:
-    if not portfolio:
-        return "No positions on file."
-    lines = []
-    for p in portfolio:
-        est = f"~${float(p['shares']) * float(p['avg_cost']):,.0f}" if p['avg_cost'] else "cost unknown"
-        cost_str = f"avg cost ${p['avg_cost']:,.2f}" if p['avg_cost'] else "avg cost unknown"
-        line = (
-            f"- {p['ticker']}: {p['shares']:,.2f} shares | {cost_str} | {est} | "
-            f"{p['asset_type'] or 'stock'}"
-        )
-        if p.get('company'):
-            line += f" | {p['company']}"
-        if p.get('notes'):
-            line += f" | NOTE: {p['notes']}"
-        lines.append(line)
-    return "\n".join(lines)
-
-
 def _format_recent_themes(recent_themes: list) -> str:
     if not recent_themes:
         return "No prior theme history available."
@@ -132,16 +105,13 @@ def _format_recent_themes(recent_themes: list) -> str:
 
 
 def run_claude(prompt: str, timeout: int = 480) -> str:
-    """Run claude -p and return stdout."""
-    result = subprocess.run(
-        ["claude", "-p", prompt],
-        capture_output=True,
-        text=True,
-        timeout=timeout,
+    client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+    message = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=8096,
+        messages=[{"role": "user", "content": prompt}],
     )
-    if result.returncode != 0:
-        raise RuntimeError(f"claude -p failed (exit {result.returncode}): {result.stderr[:500]}")
-    return result.stdout.strip()
+    return message.content[0].text
 
 
 def _parse_json(raw: str) -> any:
@@ -178,8 +148,7 @@ def _score_batch(batch: list[dict], recent_headlines_str: str) -> list[dict]:
 
 
 def analyze_articles(articles: list[dict], today: str,
-                     recent_themes: list, recent_headlines: list,
-                     portfolio: list = None) -> dict:
+                     recent_themes: list, recent_headlines: list) -> dict:
     """
     Two-pass analysis:
       Pass 1 — score articles in batches of 25 (with stale/duplicate detection)
@@ -235,7 +204,6 @@ def analyze_articles(articles: list[dict], today: str,
     synthesis_prompt = SYNTHESIS_PROMPT.format(
         today=today,
         recent_themes=_format_recent_themes(recent_themes),
-        portfolio_context=_format_portfolio(portfolio or []),
         scored_json=json.dumps(scored_summary, indent=2),
     )
 

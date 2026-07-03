@@ -27,8 +27,6 @@ from src.crawler import crawl_finviz_news
 from src.analyzer import analyze_articles
 from src.digest import build_html, send_email
 from src import database as db
-
-
 def main():
     today = date.today()
     today_str = today.strftime("%B %d, %Y")
@@ -82,14 +80,13 @@ def main():
         # ── 4. Fetch context from DB ───────────────────────────────────────
         recent_themes = db.get_recent_themes(days=7)
         recent_headlines = db.get_recent_headlines(days=3)
-        portfolio = db.get_portfolio()
+
         logger.info(
-            f"Context: {len(recent_themes)} recent themes, {len(recent_headlines)} recent headlines, "
-            f"{len(portfolio)} portfolio positions."
+            f"Context: {len(recent_themes)} recent themes, {len(recent_headlines)} recent headlines."
         )
 
         # ── 5. Run Claude analysis ─────────────────────────────────────────
-        analysis = analyze_articles(articles_for_analysis, today_str, recent_themes, recent_headlines, portfolio)
+        analysis = analyze_articles(articles_for_analysis, today_str, recent_themes, recent_headlines)
 
         # ── 6. Persist analysis ────────────────────────────────────────────
         # Map from analysis article id -> db analysis id (for duplicate linking)
@@ -139,7 +136,6 @@ def main():
                 confidence=rec.get("confidence", "medium"),
                 rationale=rec.get("rationale", ""),
                 supporting_theme=rec.get("supporting_theme", ""),
-                portfolio_note=rec.get("portfolio_note", ""),
             )
 
         for item in analysis.get("watchlist", []):
@@ -212,7 +208,5 @@ def main():
         logger.exception(f"Run failed: {e}")
         db.update_run(run_id, status="failed", error=str(e)[:500])
         sys.exit(1)
-
-
 if __name__ == "__main__":
     main()

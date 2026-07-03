@@ -74,24 +74,16 @@ def build_html(run_date: str, executive_summary: str, recommendations: list,
         conf_bg = CONFIDENCE_BG.get(confidence, "#f3f4f6")
         dir_arrow = {"bullish": "▲", "bearish": "▼", "neutral": "◆"}.get(direction, "◆")
         rec_rows += f"""
-        <tr>
-          <td style="padding:12px 8px;border-bottom:1px solid #e5e7eb;vertical-align:top;">
-            <div style="font-weight:700;font-size:14px;color:#111827;">{rec.get('title','')}</div>
-            <div style="font-size:13px;color:#374151;margin-top:4px;">{rec.get('recommendation','')}</div>
-            <div style="font-size:12px;color:#6b7280;margin-top:4px;font-style:italic;">{rec.get('rationale','')}</div>
-          </td>
-          <td style="padding:12px 8px;border-bottom:1px solid #e5e7eb;white-space:nowrap;vertical-align:top;text-align:center;">
-            <span style="color:{dir_color};font-weight:700;font-size:14px;">{dir_arrow} {direction.upper()}</span>
-          </td>
-          <td style="padding:12px 8px;border-bottom:1px solid #e5e7eb;white-space:nowrap;vertical-align:top;text-align:center;">
-            <span style="background:{conf_bg};padding:2px 8px;border-radius:9999px;font-size:12px;font-weight:600;">
-              {confidence.upper()}
-            </span>
-          </td>
-          <td style="padding:12px 8px;border-bottom:1px solid #e5e7eb;white-space:nowrap;vertical-align:top;color:#6b7280;font-size:12px;">
-            {rec.get('sector','')}
-          </td>
-        </tr>
+        <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px 16px;margin-bottom:10px;background:#fff;">
+          <div style="margin-bottom:8px;">
+            <span style="color:{dir_color};font-weight:700;font-size:13px;margin-right:8px;">{dir_arrow} {direction.upper()}</span>
+            <span style="background:{conf_bg};padding:2px 8px;border-radius:9999px;font-size:11px;font-weight:600;margin-right:8px;">{confidence.upper()}</span>
+            <span style="color:#6b7280;font-size:12px;">{rec.get('sector','')}</span>
+          </div>
+          <div style="font-weight:700;font-size:14px;color:#111827;margin-bottom:6px;">{rec.get('title','')}</div>
+          <div style="font-size:13px;color:#374151;margin-bottom:6px;">{rec.get('recommendation','')}</div>
+          <div style="font-size:12px;color:#6b7280;font-style:italic;">{rec.get('rationale','')}</div>
+        </div>
         """
 
     # ── Themes HTML ────────────────────────────────────────────────────────
@@ -288,19 +280,9 @@ def build_html(run_date: str, executive_summary: str, recommendations: list,
       <div style="font-size:16px;font-weight:800;color:#111827;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid #111827;">
         🎯 Trading Recommendations
       </div>
-      <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px;">
-        <thead>
-          <tr style="background:#f9fafb;">
-            <th style="padding:8px;font-size:11px;color:#6b7280;text-align:left;font-weight:600;text-transform:uppercase;">Recommendation</th>
-            <th style="padding:8px;font-size:11px;color:#6b7280;text-align:center;font-weight:600;text-transform:uppercase;">Direction</th>
-            <th style="padding:8px;font-size:11px;color:#6b7280;text-align:center;font-weight:600;text-transform:uppercase;">Confidence</th>
-            <th style="padding:8px;font-size:11px;color:#6b7280;text-align:left;font-weight:600;text-transform:uppercase;">Sector</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rec_rows}
-        </tbody>
-      </table>
+      <div style="margin-bottom:32px;">
+        {rec_rows}
+      </div>
 
       <!-- Themes -->
       <div style="font-size:16px;font-weight:800;color:#111827;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid #111827;">
